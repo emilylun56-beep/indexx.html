@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東坡大冒險：美味總分總密碼鎖</title>
+    <style>
+        :root {
+            --primary-color: #8c4321;
+            --bg-color: #f4eae1;
+            --card-color: #fffaf5;
+        }
+
+        body {
+            font-family: 'Noto Serif TC', 'Microsoft JhengHei', serif;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 0);
+            background-size: 24px 24px;
+            overflow-x: hidden;
+        }
+
+        #game-container {
+            max-width: 850px;
+            width: 100%;
+            background: var(--card-color);
+            border: 3px double var(--primary-color);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 2.2em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .difficulty-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .diff-easy { background-color: #4caf50; }
+        .diff-medium { background-color: #ff9800; }
+        .diff-hard { background-color: #f44336; }
+
+        .scene-title {
+            font-size: 1.4em;
+            color: #555;
+            background: #e8d3c1;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .story-intro {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            color: #444;
+            text-align: left;
+            background: #fff;
+            padding: 15px;
+            border-left: 5px solid var(--primary-color);
+            border-radius: 4px;
+        }
+
+        .cards-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: #fff;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            padding: 15px 20px;
+            font-size: 1.05em;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.3s;
+            text-align: left;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+        }
+
+        .card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+
+        .card.dragging {
+            opacity: 0.5;
+            background: #f0f0f0;
+        }
+
+        .card-tag {
+            background: #8c4321;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 15px;
+            font-weight: bold;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            font-family: inherit;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        .btn:hover {
+            background-color: #6e3318;
+            transform: scale(1.05);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 850px;
+            margin-bottom: 15px;
+        }
+
+        .music-btn {
+            background: #fff;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 5px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .score-board {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: var(--primary-color);
+            background: #fff;
+            padding: 5px 15px;
+            border-radius: 15px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            font-size: 1.3em;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .correct { color: #2e7d32; }
+        .wrong { color: #c62828; }
+
+        .dongpo-avatar {
+            font-size: 3em;
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* 🥩 東坡肉慶祝彈出特效 🥩 */
+        .pork-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .pork-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pork-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            border: 5px solid #d32f2f;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: scale(0.7);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .pork-overlay.show .pork-card {
+            transform: scale(1);
+        }
+
+        .pork-emoji {
+            font-size: 6.5em;
+            animation: bounce 1s infinite alternate;
+            display: inline-block;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0) scale(1); }
+            to { transform: translateY(-15px) scale(1.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 東坡肉彈出層 -->
+    <div class="pork-overlay" id="pork-reward">
+        <div class="pork-card">
+            <div class="pork-emoji">🥩</div>
+            <h2 style="color: #d32f2f; margin: 15px 0 5px 0; font-size: 1.8em;">密碼正確！東坡肉出鍋囉！</h2>
+            <p style="font-size: 1.1em; color: #555; margin-bottom: 20px;">香氣撲鼻！蘇東坡賞賜你一碗絕美肥嫩的東坡肉！</p>
+            <button class="btn" onclick="closeReward()">品嚐美味，前進下一關！</button>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="music-btn" onclick="toggleMusic()">🎵 背景音樂：關</button>
+        <div class="score-board">關卡: <span id="current-stage">1</span> / 3</div>
+    </div>
+
+    <div id="game-container">
+        <div class="dongpo-avatar">👨‍🎨</div>
+        <h1>東坡大冒險</h1>
+        <p style="color: #666; margin-top: -10px;">—— 挑戰遞進難度：贏取香噴噴東坡肉 ——</p>
+        <hr style="border: 0; border-top: 1px solid #dcd0c0; margin-bottom: 20px;">
+
+        <div id="game-content">
+            <!-- 動態內容將插入在此 -->
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+        <button class="btn" id="action-btn" onclick="checkAnswer()">驗證密碼破陣！</button>
+    </div>
+
+<script>
+    // 遞進難度關卡數據
+    const stages = [
+        {
+            title: "第一關：我最愛的媽媽 ❤️",
+            difficulty: "easy",
+            diffText: "入門：單句結構",
+            intro: "【初試身手】請將描寫媽媽的句子，依照「總述（開頭） ➡️ 分述（事例） ➡️ 總結（情感）」的基本順序排列。答對就能解鎖第一片東坡肉！",
+            correctOrder: ["總1", "分1", "總2"],
+            cards: [
+                { id: "總1", label: "總起", text: "在我的日常生活中，媽媽是我最崇拜、也最深愛的人。" },
+                { id: "分1", label: "分述", text: "每當我生病時，她總是整夜不睡地守在床邊照顧我；當我功課遇到挫折時，她也會溫柔地拍拍我的肩膀，耐心地鼓勵我不要放棄。" },
+                { id: "總2", label: "總結", text: "媽媽的愛就像春天的陽光一樣溫暖，我長大後一定要好好孝順她，讓她成為最幸福的媽媽。" }
+            ]
+        },
+        {
+            title: "第二關：我最喜歡的運動 🏀",
+            difficulty: "medium",
+            diffText: "進階：分述拆為 3 段",
+            intro: "【難度升級】東坡把分述的內容拆得更細了！請按照「總起 ➡️ 分述（外在練習） ➡️ 分述（內在精神） ➡️ 分述（身體好處） ➡️ 總結」的邏輯順序排列，讓東坡肉小火微燉！",
+            correctOrder: ["總", "分1", "分2", "分3", "總結"],
+            cards: [
+                { id: "總", label: "總起開頭", text: "在眾多的體育項目中，打籃球是我最熱愛、也最投入的運動項目。" },
+                { id: "分1", label: "分述一(練習)", text: "每個週末，我都會準時來到球場。不論是烈日當空還是寒風刺骨，我都會認真地練習運球、傳球和投籃，身上的汗水常常濕透了運動服。" },
+                { id: "分2", label: "分述二(精神)", text: "除了技巧的提升，籃球更讓我學會了團隊合作的精神。在比賽中，我們與隊友互相配合、彼此信任，即使比分落後也絕不輕言放棄。" },
+                { id: "分3", label: "分述三(好處)", text: "更棒的是，長期的持之以恆讓我的個子長得更高了，體魄也變得更加強健，整個人充滿了朝氣與活力。" },
+                { id: "總結", label: "總結呼應", text: "這項運動帶給我無限的快樂與健康的體譜，我會一直堅持打下去，成為球場上最亮眼的運動員。" }
+            ]
+        },
+        {
+            title: "第三關：我喜歡的水果 🍉",
+            difficulty: "hard",
+            diffText: "高階：分述拆為 2 段（外觀與口感）",
+            intro: "【終極挑戰】寫作高手登場！請將水果文章按照「總起 ➡️ 分述（外觀條紋） ➡️ 分述（口感味道） ➡️ 總結」的結構完美重組，贏取終極東坡大餐！",
+            correctOrder: ["總", "分1", "分2", "總結"],
+            cards: [
+                { id: "總", label: "總起開頭", text: "在色彩繽紛的水果世界裡，西瓜是我在夏天裡最情有獨鍾的消暑聖品。" },
+                { id: "分1", label: "分述一(外觀)", text: "牠的外表非常逗趣，穿著一件翠綠色的外衣，上面佈滿了深黑色的波浪條紋，圓滾滾的身材就像一個大胖娃娃躺在瓜田裡。" },
+                { id: "分2", label: "分述二(口感)", text: "用刀切開，鮮紅的果肉伴隨著清香撲鼻而來。大口咬下去，清甜的汁水立刻充滿整個口腔，把全身的暑氣和疲勞都消散得無影無蹤。" },
+                { id: "總結", label: "總結呼應", text: "西瓜不僅外表可愛，味道更是甘甜，它絕對是夏天不可或缺的水果之王！" }
+            ]
+        }
+    ];
+
+    let currentStageIndex = 0;
+    let isMusicPlaying = false;
+    let audioCtx = null;
+    let musicInterval = null;
+
+    function loadStage(index) {
+        if (index >= stages.length) {
+            showGameComplete();
+            return;
+        }
+
+        document.getElementById('current-stage').innerText = index + 1;
+        document.getElementById('feedback').innerText = '';
+        document.getElementById('feedback').className = 'feedback';
+        document.getElementById('action-btn').innerText = "驗證密碼破陣！";
+        document.getElementById('action-btn').setAttribute('onclick', 'checkAnswer()');
+
+        const stage = stages[index];
+        let shuffledCards = [...stage.cards].sort(() => Math.random() - 0.5);
+
+        let html = `
+            <div><span class="difficulty-badge diff-${stage.difficulty}">${stage.diffText}</span></div>
+            <div class="scene-title">${stage.title}</div>
+            <div class="story-intro"><strong>東坡教官提示：</strong>${stage.intro}</div>
+            <div class="cards-container" id="draggable-list">
+        `;
+
+        shuffledCards.forEach((card) => {
+            html += `
+                <div class="card" draggable="true" data-id="${card.id}">
+                    <div class="card-tag">排列位置</div>
+                    <div class="card-text">${card.text}</div>
+                </div>
+            `;
+        });
+
+        html += `</div>`;
+        document.getElementById('game-content').innerHTML = html;
+
+        addDragAndDropListeners();
+        updateCardTags();
+    }
+
+    function updateCardTags() {
+        const list = document.getElementById('draggable-list');
+        if(!list) return;
+        const tags = list.querySelectorAll('.card-tag');
+        tags.forEach((tag, index) => {
+            tag.innerText = `第 ${index + 1} 段`;
+            tag.style.background = "#8c4321";
+        });
+    }
+
+    function addDragAndDropListeners() {
+        const list = document.getElementById('draggable-list');
+        const cards = list.querySelectorAll('.card');
+
+        cards.forEach(card => {
+            card.addEventListener('dragstart', () => card.classList.add('dragging'));
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                updateCardTags();
+            });
+        });
+
+        list.addEventListener('dragover', e => {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(list, e.clientY);
+            const dragging = document.querySelector('.dragging');
+            if (afterElement == null) {
+                list.appendChild(dragging);
+            } else {
+                list.insertBefore(dragging, afterElement);
+            }
+        });
+    }
+
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.card:not(.dragging)')];
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function checkAnswer() {
+        const list = document.getElementById('draggable-list');
+        const cards = list.querySelectorAll('.card');
+        const stage = stages[currentStageIndex];
+        
+        let userOrder = [];
+        cards.forEach(card => {
+            userOrder.push(card.getAttribute('data-id'));
+        });
+
+        const feedback = document.getElementById('feedback');
+        let isCorrect = userOrder.length === stage.correctOrder.length && 
+                        userOrder.every((val, index) => val === stage.correctOrder[index]);
+
+        if (isCorrect) {
+            // 答對了！亮綠色結構標籤
+            const tags = list.querySelectorAll('.card-tag');
+            cards.forEach((card, index) => {
+                let cardId = card.getAttribute('data-id');
+                let cardData = stage.cards.find(c => c.id === cardId);
+                tags[index].innerText = cardData.label;
+                tags[index].style.background = "#2e7d32";
+            });
+
+            // 播放成功音效
+            playTone(523.25, 0.1); 
+            setTimeout(() => playTone(659.25, 0.15), 100); 
+            setTimeout(() => playTone(783.99, 0.2), 200); 
+
+            // 🥩 彈出東坡肉獎勵視窗 🥩
+            document.getElementById('pork-reward').classList.add('show');
+
+        } else {
+            feedback.innerText = "❌ 順序好像有點奇怪，東坡肉燒焦啦！再讀一次試試看！";
+            feedback.className = "feedback wrong";
+            playTone(293.66, 0.3); 
+        }
+    }
+
+    // 關閉東坡肉視窗並前進下一關
+    function closeReward() {
+        document.getElementById('pork-reward').classList.remove('show');
+        currentStageIndex++;
+        loadStage(currentStageIndex);
+    }
+
+    function showGameComplete() {
+        document.getElementById('game-container').innerHTML = `
+            <div class="dongpo-avatar" style="font-size: 5em;">👑</div>
+            <h1 class="correct">大獲全勝！東坡大廚神！</h1>
+            <div style="font-size: 6em; margin: 20px 0;">🥩🍱🍜</div>
+            <p style="font-size: 1.3em; line-height: 1.8;">
+                你成功破解了所有結構鎖，贏得了滿漢全席！<br>
+                記住，寫作就像烹飪東坡肉：<br>
+                <strong>開頭（總）準備食材 ➡️ 中間（分）精細雕琢美味 ➡️ 結尾（總）完美擺盤上桌</strong>。<br>
+                相信你在五年級的寫作之路上，也能寫出讓人讚不絕口的好文章！
+            </p>
+            <br>
+            <button class="btn" onclick="location.reload()">重新挑戰</button>
+        `;
+    }
+
+    // 🎵 古典五音音效
+    function playTone(freq, duration) {
+        if (!audioCtx) return;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'triangle'; 
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    const pentatonicScale = [523.25, 587.33, 659.25, 783.99, 880.00]; 
+    function playMelodyLoop() {
+        let step = 0;
+        musicInterval = setInterval(() => {
+            if (Math.random() > 0.3) { 
+                let randomNote = pentatonicScale[Math.floor(Math.random() * pentatonicScale.length)];
+                if(step % 4 === 0) playTone(randomNote / 2, 0.8);
+                playTone(randomNote, 0.4);
+            }
+            step++;
+        }, 400); 
+    }
+
+    function toggleMusic() {
+        const btn = document.querySelector('.music-btn');
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        if (!isMusicPlaying) {
+            isMusicPlaying = true;
+            btn.innerText = "🎵 背景音樂：開";
+            playMelodyLoop();
+        } else {
+            isMusicPlaying = false;
+            btn.innerText = "🎵 背景音樂：關";
+            clearInterval(musicInterval);
+        }
+    }
+
+    window.onload = () => {
+        loadStage(currentStageIndex);
+    };
+</script>
+
+</body>
+</html>
